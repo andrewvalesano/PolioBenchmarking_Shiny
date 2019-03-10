@@ -12,9 +12,9 @@ This is the base folder for the Shiny app for the polio benchmarking experiment.
 To run this app, need to have the "shiny" package installed in R. Then the app can be downloaded and run straight from GitHub. To run the app, start an R session and run the following commands: 
 
 --------
-install.packages("shiny")
+>install.packages("shiny")
 
-library(shiny)
+>library(shiny)
 
-runGitHub("PolioBenchmarking_Shiny", "andrewvalesano")
+>runGitHub("PolioBenchmarking_Shiny", "andrewvalesano")
 --------
