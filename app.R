@@ -32,7 +32,7 @@ ui <- fluidPage(
     column(3,
            sliderInput(inputId = "MapQ",
                        label = "Mean MapQ Cutoff",
-                       min = 30, max = 44, value = 0),
+                       min = 30, max = 44, value = 30),
            sliderInput(inputId = "Phred",
                        label = "Mean Phred Cutoff",
                        min = 35, max = 39, value = 30),
@@ -47,7 +47,7 @@ ui <- fluidPage(
     column(3,
            radioButtons("dups",
                         label = "Sequencing Duplicates",
-                        choices = list("Variants found only in both replicates" = "collapsed", 
+                        choices = list("Variants found in both replicates" = "collapsed", 
                                        "Using only the first replicate" = "first",
                                        "Using only the second replicate" = "second"),
                         selected = "collapsed"),
@@ -82,7 +82,6 @@ server <- function(input, output)
     file <- paste0("./data/raw/shiny.", input$disp, ".", replicate, ".", "variants.csv")
     variants_raw <- read_csv(file)
     
-    # Is this logic working correctly?
     if(input$dups == "first") {
       data <- filter(variants_raw, Rep == 1)
     } else if(input$dups == "second") {
@@ -95,7 +94,7 @@ server <- function(input, output)
     return(data)
   })
   
-  # Plot the ROC curves. Change this as needed.
+  # Plot the ROC curves.
   output$ROC <- renderPlot({
     
     data <- dataInput()
