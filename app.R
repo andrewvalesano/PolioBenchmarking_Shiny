@@ -22,7 +22,7 @@ ui <- fluidPage(
     column(6, h4("Quality Distribution"), plotOutput("QualDist")),
     column(6, h4("Distribution on Read"), plotOutput("ReadDist")),
     column(6, h4("Frequency Distribution"), plotOutput("FreqDist")),
-    column(6, h4("ROC Curves"), plotOutput("ROC")),
+    column(6, h4("ROC Curve"), plotOutput("ROC")),
     column(6, h4("Output Table"), tableOutput('table'))
   ),
   
@@ -110,7 +110,7 @@ server <- function(input, output)
     data <- mutate(data, Id = as.factor(as.character(PercWT)))
     data <- filter(data, pos > primer_fwd_outer & pos < primer_rev_outer)
 
-    filtered_data <- filter(data, MapQ > input$MapQ & Phred > input$Phred & freq.var > input$freq.var & Read_pos <= input$pos[2] & Read_pos >= input$pos[1])
+    filtered_data <- filter(data, p.val < input$p.val, MapQ > input$MapQ & Phred > input$Phred & freq.var > input$freq.var & Read_pos <= input$pos[2] & Read_pos >= input$pos[1])
 
     palette <- wes_palette("Darjeeling1")
     roc.df <- miseq.roc(filtered_data, expectedTruePos, possible_vars, ">")
@@ -136,7 +136,7 @@ server <- function(input, output)
   output$FreqDist <- renderPlot({
     data <- dataInput()
     palette <- wes_palette("FantasticFox1")
-    #ggplot(data, aes(x = Phred, y = MapQ, color = category)) + geom_point() + xlab("Phred") + ylab("MapQ") + theme_minimal() + scale_color_manual(values = palette[c(1,3)]) + ylim(c(30,44)) + xlim(c(35,39)) + geom_vline(xintercept = input$Phred, linetype = "dotted", color = "black", size = 1) + geom_hline(yintercept = input$MapQ, linetype = "dotted", color = "black", size = 1)   
+    ggplot(data, aes(x = freq.var, fill = category)) + geom_histogram(binwidth = 0.001, position = "dodge") + xlab("Frequency") + ylab("Count") + scale_fill_manual(values = palette[c(1,3)]) + theme_minimal() + geom_vline(xintercept = input$freq.var, linetype = "dotted", color = "black", size = 1) + xlim(c(0, 0.1))
   })
   
   # Make the table
