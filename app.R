@@ -19,13 +19,11 @@ ui <- fluidPage(
   titlePanel("Benchmarking Experiment for Poliovirus Variant Calling with Nextera DNA Flex"),
   
   fluidRow(
-    column(6, h4("Quality Distribution"), plotOutput("QualDist")
-    ),
-    column(6, h4("Distribution on Read"), plotOutput("ReadDist")
-    ),
+    column(6, h4("Quality Distribution"), plotOutput("QualDist")),
+    column(6, h4("Distribution on Read"), plotOutput("ReadDist")),
+    column(6, h4("Frequency Distribution"), plotOutput("FreqDist")),
     column(6, h4("ROC Curves"), plotOutput("ROC")),
-    column(6, h4("Output Table"), tableOutput('table')
-    )
+    column(6, h4("Output Table"), tableOutput('table'))
   ),
   
   hr(),
@@ -33,17 +31,17 @@ ui <- fluidPage(
   fluidRow(
     column(3,
            sliderInput(inputId = "MapQ",
-                       label = "Mean MapQ cutoff",
+                       label = "Mean MapQ Cutoff",
                        min = 30, max = 44, value = 0),
            sliderInput(inputId = "Phred",
-                       label = "Mean Phred cutoff",
+                       label = "Mean Phred Cutoff",
                        min = 35, max = 39, value = 30),
            
            sliderInput(inputId = "freq.var",
-                        label = "Frequency cutoff",
+                        label = "Frequency Cutoff",
                        min = 0, max = 0.1, value = 0),
            sliderInput(inputId = "p.val",
-                        label = "p value cutoff",
+                        label = "p-value Cutoff",
                        min = 0, max = 0.1, value = 0.01)
     ),
     column(3,
@@ -54,7 +52,7 @@ ui <- fluidPage(
                                        "Using only the second replicate" = "second"),
                         selected = "collapsed"),
            radioButtons("disp",
-                        label = "deepSNV dispersion model",
+                        label = "deepSNV Dispersion Model",
                         choices = list("Binomial" = "binomial", 
                                        "Betabinominal one-sided" = "onesided"),
                                        #"Betabinominal two-sided" = "twosided"),
@@ -70,7 +68,7 @@ ui <- fluidPage(
     ),
     column(3,
            sliderInput("pos",
-                       label="Read position cut off",
+                       label="Read Position Cutoff",
                        min = 0, max = 250, value = c(0, 250))
     )
   )           
@@ -132,6 +130,13 @@ server <- function(input, output)
     data <- dataInput()
     palette <- wes_palette("FantasticFox1")
     ggplot(data, aes(x = Read_pos, fill = category)) + geom_histogram(position = "dodge") + xlab("Read Position") + ylab("Count") + scale_fill_manual(values = palette[c(1,3)]) + theme_minimal() + geom_vline(xintercept = input$pos, linetype = "dotted", color = "black", size = 1)
+  })
+  
+  # Plot frequency histogram, color-coded by TP/FP
+  output$FreqDist <- renderPlot({
+    data <- dataInput()
+    palette <- wes_palette("FantasticFox1")
+    #ggplot(data, aes(x = Phred, y = MapQ, color = category)) + geom_point() + xlab("Phred") + ylab("MapQ") + theme_minimal() + scale_color_manual(values = palette[c(1,3)]) + ylim(c(30,44)) + xlim(c(35,39)) + geom_vline(xintercept = input$Phred, linetype = "dotted", color = "black", size = 1) + geom_hline(yintercept = input$MapQ, linetype = "dotted", color = "black", size = 1)   
   })
   
   # Make the table
