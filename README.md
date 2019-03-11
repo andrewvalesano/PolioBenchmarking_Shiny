@@ -22,11 +22,19 @@ To run this app, need to have the "shiny" package installed in R. Then the app c
 R package dependencies:
 
 shiny
+
 tidyverse
+
 ggplot2
+
 pROC
+
 wesanderson
+
 gtable
+
 gridExtra
+
 plyr
+
 reshape2
