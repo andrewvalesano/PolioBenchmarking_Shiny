@@ -18,3 +18,15 @@ To run this app, need to have the "shiny" package installed in R. Then the app c
 
 >runGitHub("PolioBenchmarking_Shiny", "andrewvalesano")
 --------
+
+R package dependencies:
+
+shiny
+tidyverse
+ggplot2
+pROC
+wesanderson
+gtable
+gridExtra
+plyr
+reshape2
