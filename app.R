@@ -22,6 +22,7 @@ ui <- fluidPage(
     column(6, h4("Distribution on Read"), plotOutput("ReadDist")),
     column(6, h4("Frequency Distribution"), plotOutput("FreqDist")),
     column(6, h4("ROC Curve"), plotOutput("ROC")),
+    column(6, h4("Variant Frequency: Expected vs. Observed"), plotOutput("ObservedExpected")),
     column(6, h4("Output Table"), tableOutput('table'))
   ),
   
@@ -90,6 +91,17 @@ server <- function(input, output)
     }
     
     data <- filter(data, InputLevel == input$inputLevel)
+    
+    primer_fwd_outer <- 95 # 95 to 115
+    primer_rev_outer <- 7440 # 7415 to 7440
+    possible_vars <- (primer_rev_outer - primer_fwd_outer - 1)*3 # Positions in primer range, times 3.
+    data <- mutate(data, exp.freq = PercWT/100)
+    data <- mutate(data, Id = as.factor(as.character(PercWT)))
+    data <- filter(data, pos > primer_fwd_outer & pos < primer_rev_outer)
+    
+    range_factor <- 5 # this filter prevents there from being observed true positives that are due to lack of Sabin1 amplification in low copy number samples
+    data <- mutate(data, category = ifelse(freq.var > exp.freq*range_factor | freq.var < exp.freq*(1/range_factor), FALSE, category))
+    
     return(data)
   })
   
@@ -103,10 +115,6 @@ server <- function(input, output)
     expectedVariants <- read_csv("./data/reference/MixingStudyExpectedVariants.csv")
     expectedTruePos <- nrow(expectedVariants) # Expect to see 66 variants.
     possible_vars <- (primer_rev_outer - primer_fwd_outer - 1)*3 # Positions in primer range, times 3.
-    
-    data <- mutate(data, exp.freq = PercWT/100)
-    data <- mutate(data, Id = as.factor(as.character(PercWT)))
-    data <- filter(data, pos > primer_fwd_outer & pos < primer_rev_outer)
 
     filtered_data <- filter(data, p.val < input$p.val, MapQ > input$MapQ & Phred > input$Phred & freq.var > input$freq.var & Read_pos <= input$pos[2] & Read_pos >= input$pos[1])
 
@@ -119,22 +127,39 @@ server <- function(input, output)
   # Plot MapQ and Phred, color-coded by TP/FP
   output$QualDist <- renderPlot({
     data <- dataInput()
-    palette <- wes_palette("FantasticFox1")
-    ggplot(data, aes(x = Phred, y = MapQ, color = category)) + geom_point() + xlab("Phred") + ylab("MapQ") + theme_minimal() + scale_color_manual(values = palette[c(1,3)]) + ylim(c(30,44)) + xlim(c(35,39)) + geom_vline(xintercept = input$Phred, linetype = "dotted", color = "black", size = 1) + geom_hline(yintercept = input$MapQ, linetype = "dotted", color = "black", size = 1)   
+    palette <- wes_palette("Darjeeling1")
+    ggplot(data, aes(x = Phred, y = MapQ, color = category)) + geom_point() + xlab("Phred") + ylab("MapQ") + theme_minimal() + scale_color_manual(values = palette[c(4,5)]) + ylim(c(30,44)) + xlim(c(35,39)) + geom_vline(xintercept = input$Phred, linetype = "dotted", color = "black", size = 1) + geom_hline(yintercept = input$MapQ, linetype = "dotted", color = "black", size = 1)   
   })
   
   # Plot average read position, color-coded by TP/FP
   output$ReadDist <- renderPlot({
     data <- dataInput()
-    palette <- wes_palette("FantasticFox1")
-    ggplot(data, aes(x = Read_pos, fill = category)) + geom_histogram(position = "dodge") + xlab("Read Position") + ylab("Count") + scale_fill_manual(values = palette[c(1,3)]) + theme_minimal() + geom_vline(xintercept = input$pos, linetype = "dotted", color = "black", size = 1)
+    palette <- wes_palette("Darjeeling1")
+    ggplot(data, aes(x = Read_pos, fill = category)) + geom_histogram(position = "dodge") + xlab("Read Position") + ylab("Count") + scale_fill_manual(values = palette[c(4,5)]) + theme_minimal() + geom_vline(xintercept = input$pos, linetype = "dotted", color = "black", size = 1)
   })
   
   # Plot frequency histogram, color-coded by TP/FP
   output$FreqDist <- renderPlot({
     data <- dataInput()
-    palette <- wes_palette("FantasticFox1")
-    ggplot(data, aes(x = freq.var, fill = category)) + geom_histogram(binwidth = 0.001, position = "dodge") + xlab("Frequency") + ylab("Count") + scale_fill_manual(values = palette[c(1,3)]) + theme_minimal() + geom_vline(xintercept = input$freq.var, linetype = "dotted", color = "black", size = 1) + xlim(c(0, 0.1))
+    palette <- wes_palette("Darjeeling1")
+    ggplot(data, aes(x = freq.var, fill = category)) + geom_histogram(binwidth = 0.001, position = "dodge") + xlab("Frequency") + ylab("Count") + scale_fill_manual(values = palette[c(4,5)]) + theme_minimal() + geom_vline(xintercept = input$freq.var, linetype = "dotted", color = "black", size = 1) + xlim(c(0, 0.1))
+  })
+  
+  # Plot observed vs. expected frequency
+  output$ObservedExpected <- renderPlot({
+    data <- dataInput()
+    data <- mutate(data, exp.freq = PercWT/100)
+    palette <- wes_palette("Darjeeling1")
+    
+    ggplot(data, aes(x = exp.freq, y = freq.var, color = category)) + 
+      geom_point(size = 1) +
+      scale_color_manual(values = palette[c(4,5)]) +
+      theme_minimal() + 
+      geom_abline(intercept = 0, slope = 1,linetype = 2, size = 1) + 
+      xlab("Expected Frequency") + 
+      ylab("Observed Frequency") + 
+      scale_y_log10(limits=c(0.001,0.1),breaks=c(0.001,0.002,0.005,0.01,0.02,0.05,0.1)) +
+      scale_x_log10(limits=c(0.001,0.1),breaks=c(0.001,0.002,0.005,0.01,0.02,0.05,0.1))
   })
   
   # Make the table
@@ -143,17 +168,14 @@ server <- function(input, output)
     
     primer_fwd_outer <- 95 # 95 to 115
     primer_rev_outer <- 7440 # 7415 to 7440
-    
     expectedVariants <- read_csv("./data/reference/MixingStudyExpectedVariants.csv")
     expectedTruePos <- nrow(expectedVariants) # Expect to see 66 variants.
     possible_vars <- (primer_rev_outer - primer_fwd_outer - 1)*3 # Positions in primer range, times 3.
     
-    data <- mutate(data, exp.freq = PercWT/100)
-    data <- mutate(data, Id = as.factor(as.character(PercWT)))
-    data <- filter(data, pos > primer_fwd_outer & pos < primer_rev_outer)
+    filtered_data <- filter(data, p.val < input$p.val, MapQ > input$MapQ & Phred > input$Phred & freq.var > input$freq.var & Read_pos <= input$pos[2] & Read_pos >= input$pos[1])
     
     dd = 4
-    m.roc.table <- miseq.roc.table(data, 1, expectedTruePos, possible_vars, ">")
+    m.roc.table <- miseq.roc.table(filtered_data, 1, expectedTruePos, possible_vars, ">")
     m.roc.table <- rename(m.roc.table, c("exp.freq"="Frequency","adj.sensitivity"="Sensitivity","TP"="True\nPositives","adj.specificity"="Specificity","FP"="False\nPositives"))
     m.roc.table$Frequency <- c("100%", "10%", "5%", "2%", "1%")
     m.roc.table$Sensitivity <- round(m.roc.table$Sensitivity, digits = dd)
