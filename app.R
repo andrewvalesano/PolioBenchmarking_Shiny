@@ -23,7 +23,9 @@ ui <- fluidPage(
     column(6, h4("Frequency Distribution"), plotOutput("FreqDist")),
     column(6, h4("ROC Curve"), plotOutput("ROC")),
     column(6, h4("Variant Frequency: Expected vs. Observed"), plotOutput("ObservedExpected")),
-    column(6, h4("Output Table"), tableOutput('table'))
+    column(6, h4("Coverage"), plotOutput("Coverage")),
+    column(6, h4("Output Table"), tableOutput('table')),
+    column(6, h4("Expected Variants by Position"), plotOutput("Variants"))
   ),
   
   hr(),
@@ -39,9 +41,14 @@ ui <- fluidPage(
            
            sliderInput(inputId = "freq.var",
                         label = "Frequency Cutoff",
-                       min = 0, max = 0.1, value = 0),
+                       min = 0, max = 0.1, value = 0)
+    ),
+    column(3,
+           sliderInput("pos",
+                       label="Read Position Cutoff",
+                       min = 0, max = 250, value = c(0, 250)),
            sliderInput(inputId = "p.val",
-                        label = "p-value Cutoff",
+                       label = "p-value Cutoff",
                        min = 0, max = 0.1, value = 0.01)
     ),
     column(3,
@@ -56,20 +63,26 @@ ui <- fluidPage(
                         choices = list("Binomial" = "binomial", 
                                        "Betabinominal one-sided" = "onesided"),
                                        #"Betabinominal two-sided" = "twosided"),
-                        selected = "onesided")
-           
+                        selected = "onesided"),
+           radioButtons("tna",
+                        label = "Spiked into stool total nucleic acid",
+                        choices = list("Spike-in" = "yes", 
+                                       "No spike-in" = "no"),
+                        selected = "yes")
     ),
     
     column(3,
            radioButtons("inputLevel",
                         label = "Genome Copy Input",
-                        choices = list("10^5" = "E5", "10^4" = "E4", "10^3" = "E3", "10^2" = "E2", "10^1" = "E1"),
-                        selected = "E5")
-    ),
-    column(3,
-           sliderInput("pos",
-                       label="Read Position Cutoff",
-                       min = 0, max = 250, value = c(0, 250))
+                        choices = list("4x10^4" = "4_E4", "9x10^3" = "9_E3", "9x10^2" = "9_E2", "9x10^1" = "9_E1"),
+                        selected = "4_E4"),
+           radioButtons("subset",
+                        label = "Subset of Reads",
+                        choices = list("100%" = "100", 
+                                       "50%" = "50",
+                                       "25%" = "25",
+                                       "10%" = "10"),
+                        selected = "100")
     )
   )           
 )
@@ -79,7 +92,7 @@ server <- function(input, output)
   dataInput <- reactive({
     
     replicate = ifelse(input$dups == "first" | input$dups == "second", "notcollapsed", "collapsed")
-    file <- paste0("./data/raw/shiny.", input$disp, ".", replicate, ".", "variants.csv")
+    file <- paste0("./data/processed/shiny2.", input$disp, ".", input$subset, ".", replicate, ".variants.csv")
     variants_raw <- read_csv(file)
     
     if(input$dups == "first") {
@@ -90,7 +103,8 @@ server <- function(input, output)
       data <- variants_raw
     }
     
-    data <- filter(data, InputLevel == input$inputLevel)
+    data <- filter(data, InputLevel == input$inputLevel, inTNA == input$tna)
+    data <- mutate(data, SampleNumber = Id)
     
     primer_fwd_outer <- 95 # 95 to 115
     primer_rev_outer <- 7440 # 7415 to 7440
@@ -100,9 +114,17 @@ server <- function(input, output)
     data <- filter(data, pos > primer_fwd_outer & pos < primer_rev_outer)
     
     range_factor <- 5 # this filter prevents there from being observed true positives that are due to lack of Sabin1 amplification in low copy number samples
-    data <- mutate(data, category = ifelse(freq.var > exp.freq*range_factor | freq.var < exp.freq*(1/range_factor), FALSE, category))
+    #data <- mutate(data, category = ifelse(freq.var > exp.freq*range_factor | freq.var < exp.freq*(1/range_factor), FALSE, category))
     
     return(data)
+  })
+  
+  covInput <- reactive({
+    
+    file <- paste0("./data/processed/shiny2.", input$disp, ".", input$subset, ".coverage.csv")
+    coverage_raw <- read.csv(file)
+    
+    return(coverage_raw)
   })
   
   # Plot the ROC curves.
@@ -158,8 +180,64 @@ server <- function(input, output)
       geom_abline(intercept = 0, slope = 1,linetype = 2, size = 1) + 
       xlab("Expected Frequency") + 
       ylab("Observed Frequency") + 
-      scale_y_log10(limits=c(0.001,0.1),breaks=c(0.001,0.002,0.005,0.01,0.02,0.05,0.1)) +
-      scale_x_log10(limits=c(0.001,0.1),breaks=c(0.001,0.002,0.005,0.01,0.02,0.05,0.1))
+      scale_y_log10(limits=c(0.001,0.5),breaks=c(0.001,0.002,0.005,0.01,0.02,0.05,0.1, 0.25, 0.5)) +
+      scale_x_log10(limits=c(0.001,0.5),breaks=c(0.001,0.002,0.005,0.01,0.02,0.05,0.1))
+  })
+  
+  # Plot coverage for the given samples
+  output$Coverage <- renderPlot({
+    data <- dataInput()
+    coverage_raw <- covInput()
+    coverage <- filter(coverage_raw, Id %in% data$SampleNumber)
+    
+    base = 12000
+    interval = 300
+    linesize = 1.2
+    ggplot(coverage, aes(x = chr.pos, y = coverage, group = Id)) + geom_line(aes(color = Id)) + 
+      theme_bw() + 
+      xlab("Genome Position") + 
+      ylab("Coverage (Read Depth)") + 
+      theme(legend.position = "none") +
+      xlim(c(95, 7440)) +
+      geom_segment(data = coverage, size = linesize, color = "orange1", aes(x = 98, y = base + interval*0, xend = 2436, yend = base + interval*0)) +
+      geom_segment(data = coverage, size = linesize, color = "mediumseagreen", aes(x = 1472, y = base + interval*1, xend = 4151, yend = base + interval*1)) +
+      geom_segment(data = coverage, size = linesize, color = "indianred4", aes(x = 3214, y = base + interval*2, xend = 5861, yend = base + interval*2)) +
+      geom_segment(data = coverage, size = linesize, color = "slateblue3", aes(x = 4966, y = base + interval*3, xend = 7400, yend = base + interval*3))
+  })
+  
+  # Plot position of true positives and false negatives
+  output$Variants <- renderPlot({
+    data <- dataInput()
+    data <- filter(data, p.val < input$p.val, MapQ > input$MapQ & Phred > input$Phred & freq.var > input$freq.var & Read_pos <= input$pos[2] & Read_pos >= input$pos[1])
+    data <- mutate(data, level = ifelse(PercWT == 1, "1_percent", 
+                                        ifelse(PercWT == 2, "2_percent", 
+                                               ifelse(PercWT == 5, "5_percent", 
+                                                      ifelse(PercWT == 10, "10_percent", 
+                                                             ifelse(PercWT == 100, "100_percent", NA))))))
+    data <- mutate(data, mutation_level = paste0(mutation, "_", level))
+    
+    expectedVariants <- read_csv("./data/reference/MixingStudyExpectedVariants_ByLevel.csv")
+    expectedVariants <- mutate(expectedVariants, mutation_level = paste0(mutation, "_", level))
+    expectedVariants <- mutate(expectedVariants, found = ifelse(mutation_level %in% data$mutation_level, "True Positive", "False Negative"))
+    
+    levels <- c("100_percent", "10_percent", "5_percent", "2_percent", "1_percent")
+    chrs <- data.frame("level" = levels)
+    chrs <- mutate(chrs, start = 0, stop = 7440)
+    palette <- wes_palette("Darjeeling1")
+    expectedVariants$level <- factor(expectedVariants$level, levels = rev(c("100_percent","10_percent","5_percent","2_percent","1_percent")))
+    chrs$level <- factor(chrs$level, levels = levels(expectedVariants$level))
+    
+    ggplot(expectedVariants, aes(x = Position, y = level)) +
+      geom_point(aes(color = found), size = 5, shape = 108) +
+      geom_segment(data = chrs, aes(x = start, y = level, xend = stop, yend = level)) +
+      ylab("Expected Frequency Group") +
+      xlab("") +
+      theme_minimal() +
+      scale_color_manual(name = "", values = palette[c(1,2)]) +
+      theme(axis.line.x = element_blank(), axis.line.y = element_blank()) +
+      scale_x_continuous(breaks = c()) +
+      theme(panel.grid.major = element_line(colour = "gray96"), panel.grid.minor = element_line(colour = "white")) + theme(legend.position = "bottom") +
+      scale_x_continuous(breaks = c(0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 7500))
   })
   
   # Make the table
