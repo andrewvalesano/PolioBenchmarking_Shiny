@@ -49,7 +49,7 @@ ui <- fluidPage(
                        min = 0, max = 250, value = c(0, 250)),
            sliderInput(inputId = "p.val",
                        label = "p-value Cutoff",
-                       min = 0, max = 0.1, value = 0.01)
+                       min = 0, max = 0.9, value = 0.1)
     ),
     column(3,
            radioButtons("dups",
