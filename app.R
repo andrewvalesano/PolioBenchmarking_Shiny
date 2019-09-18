@@ -15,7 +15,7 @@ library(reshape2)
 source("./supportFunctions.R")
 
 ui <- fluidPage(
-  titlePanel("Benchmarking Experiment for Poliovirus Variant Calling with Nextera DNA Flex"),
+  titlePanel("Benchmarking Experiment for Poliovirus Variant Calling v2.0"),
   
   fluidRow(
     column(6, h4("Quality Distribution"), plotOutput("QualDist")),
@@ -25,7 +25,9 @@ ui <- fluidPage(
     column(6, h4("Variant Frequency: Expected vs. Observed"), plotOutput("ObservedExpected")),
     column(6, h4("Coverage"), plotOutput("Coverage")),
     column(6, h4("Output Table"), tableOutput('table')),
-    column(6, h4("Expected Variants by Position"), plotOutput("Variants"))
+    column(6, h4("Expected Variants by Position"), plotOutput("Variants")),
+    column(6, h4("False Positives by Position"), plotOutput("FalseVariants")),
+    column(6, h4("True Variant Frequency by Position"), plotOutput("FreqByPosition"))
   ),
   
   hr(),
@@ -142,7 +144,15 @@ server <- function(input, output)
 
     palette <- wes_palette("Darjeeling1")
     roc.df <- miseq.roc(filtered_data, expectedTruePos, possible_vars, ">")
-    roc.plot <- ggplot(roc.df, aes(x = 1-adj.specificity, y = adj.sensitivity)) + geom_step(aes(color = samp), size = 0.7) + xlab(bquote("1-Specificity (x"~10^-3~")")) + ylab("Sensitivity") + scale_y_continuous(limits=c(0,1)) + scale_x_continuous(limits=c(0,0.005),breaks=c(0,0.001,0.002,0.003,0.004,0.005),labels=c(0:5)) + theme_minimal() + theme(legend.position="right") + scale_color_manual(values = palette, name="Frequency (%)")
+    roc.plot <- ggplot(roc.df, aes(x = 1-adj.specificity, y = adj.sensitivity)) + 
+      geom_step(aes(color = samp), size = 0.7) + 
+      xlab(bquote("1-Specificity (x"~10^-3~")")) + 
+      ylab("Sensitivity") + 
+      scale_y_continuous(limits=c(0,1)) + 
+      scale_x_continuous(limits=c(0,0.005),breaks=c(0,0.001,0.002,0.003,0.004,0.005),labels=c(0:5)) + 
+      theme_minimal() + 
+      theme(legend.position="right") + 
+      scale_color_manual(values = palette, name="Frequency (%)")
     roc.plot
   })
   
@@ -180,11 +190,12 @@ server <- function(input, output)
       geom_abline(intercept = 0, slope = 1,linetype = 2, size = 1) + 
       xlab("Expected Frequency") + 
       ylab("Observed Frequency") + 
-      scale_y_log10(limits=c(0.001,0.5),breaks=c(0.001,0.002,0.005,0.01,0.02,0.05,0.1, 0.25, 0.5)) +
-      scale_x_log10(limits=c(0.001,0.5),breaks=c(0.001,0.002,0.005,0.01,0.02,0.05,0.1))
+      scale_y_log10(limits=c(0.001,1),breaks=c(0.001,0.002,0.005,0.01,0.02,0.05,0.1, 0.25, 0.5, 1)) +
+      scale_x_log10(limits=c(0.001,1),breaks=c(0.001,0.002,0.005,0.01,0.02,0.05,0.1, 0.25, 0.5, 1))
   })
   
   # Plot coverage for the given samples
+  # ALV: add lines for various coverage levels for comparison with low-coverage areas
   output$Coverage <- renderPlot({
     data <- dataInput()
     coverage_raw <- covInput()
@@ -202,7 +213,9 @@ server <- function(input, output)
       geom_segment(data = coverage, size = linesize, color = "orange1", aes(x = 98, y = base + interval*0, xend = 2436, yend = base + interval*0)) +
       geom_segment(data = coverage, size = linesize, color = "mediumseagreen", aes(x = 1472, y = base + interval*1, xend = 4151, yend = base + interval*1)) +
       geom_segment(data = coverage, size = linesize, color = "indianred4", aes(x = 3214, y = base + interval*2, xend = 5861, yend = base + interval*2)) +
-      geom_segment(data = coverage, size = linesize, color = "slateblue3", aes(x = 4966, y = base + interval*3, xend = 7400, yend = base + interval*3))
+      geom_segment(data = coverage, size = linesize, color = "slateblue3", aes(x = 4966, y = base + interval*3, xend = 7400, yend = base + interval*3)) +
+      geom_abline(intercept = 200, slope = 0, linetype = 3, size = 0.5, color = "black") + 
+      geom_abline(intercept = 1000, slope = 0, linetype = 3, size = 0.5, color = "black")
   })
   
   # Plot position of true positives and false negatives
@@ -238,6 +251,85 @@ server <- function(input, output)
       scale_x_continuous(breaks = c()) +
       theme(panel.grid.major = element_line(colour = "gray96"), panel.grid.minor = element_line(colour = "white")) + theme(legend.position = "bottom") +
       scale_x_continuous(breaks = c(0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 7500))
+  })
+  
+  # Plot position of false positives
+  output$FalseVariants <- renderPlot({
+    
+    data <- dataInput()
+    data <- filter(data, p.val < input$p.val, MapQ > input$MapQ & Phred > input$Phred & freq.var > input$freq.var & Read_pos <= input$pos[2] & Read_pos >= input$pos[1])
+    data <- mutate(data, level = ifelse(PercWT == 1, "1_percent", 
+                                        ifelse(PercWT == 2, "2_percent", 
+                                               ifelse(PercWT == 5, "5_percent", 
+                                                      ifelse(PercWT == 10, "10_percent", 
+                                                             ifelse(PercWT == 100, "100_percent", NA))))))
+    data <- mutate(data, mutation_level = paste0(mutation, "_", level))
+    data <- filter(data, category == FALSE & !is.na(level))
+    
+    levels <- c("100_percent", "10_percent", "5_percent", "2_percent", "1_percent")
+    chrs <- data.frame("level" = levels)
+    chrs <- mutate(chrs, start = 0, stop = 7440)
+    palette <- wes_palette("Darjeeling1")
+    data$level <- factor(data$level, levels = rev(c("100_percent","10_percent","5_percent","2_percent","1_percent")))
+    chrs$level <- factor(chrs$level, levels = levels(data$level))
+    
+    ggplot(data, aes(x = pos, y = level)) +
+      geom_point(aes(), size = 5, shape = 108, color = "violet") +
+      geom_segment(data = chrs, aes(x = start, y = level, xend = stop, yend = level)) +
+      ylab("Expected Frequency Group") +
+      xlab("") +
+      theme_minimal() +
+      scale_color_manual(name = "", values = palette[c(1,2)]) +
+      theme(axis.line.x = element_blank(), axis.line.y = element_blank()) +
+      scale_x_continuous(breaks = c()) +
+      theme(panel.grid.major = element_line(colour = "gray96"), panel.grid.minor = element_line(colour = "white")) + theme(legend.position = "bottom") +
+      scale_x_continuous(breaks = c(0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 7500))
+  })
+  
+  # Plot frequency of true positive variants against position, color by expected frequency
+  # ALV: finish this one
+  output$FreqByPosition <- renderPlot({
+    
+    data <- dataInput()
+    data <- filter(data, p.val < input$p.val, MapQ > input$MapQ & Phred > input$Phred & freq.var > input$freq.var & Read_pos <= input$pos[2] & Read_pos >= input$pos[1])
+    data <- mutate(data, level = ifelse(PercWT == 1, "1_percent", 
+                                        ifelse(PercWT == 2, "2_percent", 
+                                               ifelse(PercWT == 5, "5_percent", 
+                                                      ifelse(PercWT == 10, "10_percent", 
+                                                             ifelse(PercWT == 100, "100_percent", NA))))))
+    data <- mutate(data, mutation_level = paste0(mutation, "_", level))
+    data <- filter(data, category == TRUE & !is.na(level))
+    
+    levels <- c("100_percent", "10_percent", "5_percent", "2_percent", "1_percent")
+    chrs <- data.frame("level" = levels)
+    chrs <- mutate(chrs, start = 0, stop = 7440)
+    palette <- wes_palette("Darjeeling1")
+    data$level <- factor(data$level, levels = rev(c("100_percent","10_percent","5_percent","2_percent","1_percent")))
+    chrs$level <- factor(chrs$level, levels = levels(data$level))
+    
+    base = 0.6
+    interval = 0.02
+    linesize = 1.2
+    
+    ggplot(data)  +
+      geom_point(aes(x = pos, y = freq.var, color = level)) +
+      ylab("Frequency") +
+      xlab("Genome Position") +
+      theme_minimal() +
+      theme(axis.line.x = element_blank(), axis.line.y = element_blank()) +
+      theme(panel.grid.major = element_line(colour = "gray96"), panel.grid.minor = element_line(colour = "white")) + 
+      theme(legend.position = "right") +
+      ylim(c(0, 0.7)) +
+      scale_x_continuous(breaks = c(0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 7500)) +
+      scale_color_manual(values = palette, name = "Expected Frequency") +
+      geom_abline(intercept = 0.1, slope = 0, linetype = 3, size = 0.5, color = palette[4]) + 
+      geom_abline(intercept = 0.05, slope = 0, linetype = 3, size = 0.5, color = palette[3]) + 
+      geom_abline(intercept = 0.02, slope = 0, linetype = 3, size = 0.5, color = palette[2]) + 
+      geom_abline(intercept = 0.01, slope = 0, linetype = 3, size = 0.5, color = palette[1]) +
+      geom_segment(data = data, size = linesize, color = "orange1", aes(x = 98, y = base + interval*0, xend = 2436, yend = base + interval*0)) +
+      geom_segment(data = data, size = linesize, color = "mediumseagreen", aes(x = 1472, y = base + interval*1, xend = 4151, yend = base + interval*1)) +
+      geom_segment(data = data, size = linesize, color = "indianred4", aes(x = 3214, y = base + interval*2, xend = 5861, yend = base + interval*2)) +
+      geom_segment(data = data, size = linesize, color = "slateblue3", aes(x = 4966, y = base + interval*3, xend = 7400, yend = base + interval*3))
   })
   
   # Make the table
