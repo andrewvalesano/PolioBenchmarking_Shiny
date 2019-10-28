@@ -9,21 +9,30 @@ library(tidyverse)
 
 sampleInfo <- read.csv("./data/reference/MixingStudySamples2.csv")
 
-variants_binomial_100 <- read.csv("./data/raw/shiny2.binomial.100.variants.csv")
-variants_onesided_100 <- read.csv("./data/raw/shiny2.onesided.100.variants.csv")
+variants_senslocal_binomial_100 <- read.csv("./data/raw/shiny2.senslocal.binomial.100.variants.csv")
+variants_senslocal_onesided_100 <- read.csv("./data/raw/shiny2.senslocal.onesided.100.variants.csv")
 
-variants_binomial_50 <- read.csv("./data/raw/shiny2.binomial.50.variants.csv")
-variants_onesided_50 <- read.csv("./data/raw/shiny2.onesided.50.variants.csv")
+variants_senslocal_binomial_50 <- read.csv("./data/raw/shiny2.senslocal.binomial.50.variants.csv")
+variants_senslocal_onesided_50 <- read.csv("./data/raw/shiny2.senslocal.onesided.50.variants.csv")
 
-variants_binomial_25 <- read.csv("./data/raw/shiny2.binomial.25.variants.csv")
-variants_onesided_25 <- read.csv("./data/raw/shiny2.onesided.25.variants.csv")
+variants_senslocal_binomial_25 <- read.csv("./data/raw/shiny2.senslocal.binomial.25.variants.csv")
+variants_senslocal_onesided_25 <- read.csv("./data/raw/shiny2.senslocal.onesided.25.variants.csv")
 
-variants_binomial_10 <- read.csv("./data/raw/shiny2.binomial.10.variants.csv")
-variants_onesided_10 <- read.csv("./data/raw/shiny2.onesided.10.variants.csv")
+variants_senslocal_binomial_10 <- read.csv("./data/raw/shiny2.senslocal.binomial.10.variants.csv")
+variants_senslocal_onesided_10 <- read.csv("./data/raw/shiny2.senslocal.onesided.10.variants.csv")
 
-#variants_twosided <- read.csv("./data/raw/shiny2.twosided.variants.csv") # data file seems to be broken. Some columns shifted leftward. Ugh.
-#filter(variants_twosided, chr != "pT7_S1F") %>% View()
-#filter(variants_twosided, chr == "pT7_S1F") %>% View()
+variants_verysens_binomial_100 <- read.csv("./data/raw/shiny2.verysens.binomial.100.variants.csv")
+variants_verysens_onesided_100 <- read.csv("./data/raw/shiny2.verysens.onesided.100.variants.csv")
+
+variants_verysens_binomial_50 <- read.csv("./data/raw/shiny2.verysens.binomial.50.variants.csv")
+variants_verysens_onesided_50 <- read.csv("./data/raw/shiny2.verysens.onesided.50.variants.csv")
+
+variants_verysens_binomial_25 <- read.csv("./data/raw/shiny2.verysens.binomial.25.variants.csv")
+variants_verysens_onesided_25 <- read.csv("./data/raw/shiny2.verysens.onesided.25.variants.csv")
+
+variants_verysens_binomial_10 <- read.csv("./data/raw/shiny2.verysens.binomial.10.variants.csv")
+variants_verysens_onesided_10 <- read.csv("./data/raw/shiny2.verysens.onesided.10.variants.csv")
+
 
 # ======================== Collapse functions ============================
 
@@ -66,128 +75,204 @@ sampleInfo <- mutate(sampleInfo, Id = SampleNumber)
 ### Binomial Data
 
 # 100%
-variants_with_meta <- left_join(variants_binomial_100, sampleInfo, by = "Id")
+variants_with_meta <- left_join(variants_senslocal_binomial_100, sampleInfo, by = "Id")
 variants_with_meta <- mutate(variants_with_meta, group = paste0(inTNA, "_", InputLevel, "_", PercWT))
 variants_with_meta %>% group_by(group) %>% do(collapse_localcov(.)) -> variants_collapsed
 bin_notcollapsed_100 <- mutate(variants_with_meta, category = ifelse(mutation %in% expectedVariants$mutation, TRUE, FALSE))
 bin_collapsed_100 <- mutate(variants_collapsed, category = ifelse(mutation %in% expectedVariants$mutation, TRUE, FALSE))
-write_csv(bin_notcollapsed_100, "./data/processed/shiny2.binomial.100.notcollapsed.variants.csv")
-write_csv(bin_collapsed_100, "./data/processed/shiny2.binomial.100.collapsed.variants.csv")
+write_csv(bin_notcollapsed_100, "./data/processed/shiny2.senslocal.binomial.100.notcollapsed.variants.csv")
+write_csv(bin_collapsed_100, "./data/processed/shiny2.senslocal.binomial.100.collapsed.variants.csv")
+
+variants_with_meta <- left_join(variants_verysens_binomial_100, sampleInfo, by = "Id")
+variants_with_meta <- mutate(variants_with_meta, group = paste0(inTNA, "_", InputLevel, "_", PercWT))
+variants_with_meta %>% group_by(group) %>% do(collapse_localcov(.)) -> variants_collapsed
+bin_notcollapsed_100 <- mutate(variants_with_meta, category = ifelse(mutation %in% expectedVariants$mutation, TRUE, FALSE))
+bin_collapsed_100 <- mutate(variants_collapsed, category = ifelse(mutation %in% expectedVariants$mutation, TRUE, FALSE))
+write_csv(bin_notcollapsed_100, "./data/processed/shiny2.verysens.binomial.100.notcollapsed.variants.csv")
+write_csv(bin_collapsed_100, "./data/processed/shiny2.verysens.binomial.100.collapsed.variants.csv")
 
 # 50%
-variants_with_meta <- left_join(variants_binomial_50, sampleInfo, by = "Id")
+variants_with_meta <- left_join(variants_senslocal_binomial_50, sampleInfo, by = "Id")
 variants_with_meta <- mutate(variants_with_meta, group = paste0(inTNA, "_", InputLevel, "_", PercWT))
 variants_with_meta %>% group_by(group) %>% do(collapse_localcov(.)) -> variants_collapsed
 bin_notcollapsed_50 <- mutate(variants_with_meta, category = ifelse(mutation %in% expectedVariants$mutation, TRUE, FALSE))
 bin_collapsed_50 <- mutate(variants_collapsed, category = ifelse(mutation %in% expectedVariants$mutation, TRUE, FALSE))
-write_csv(bin_notcollapsed_50, "./data/processed/shiny2.binomial.50.notcollapsed.variants.csv")
-write_csv(bin_collapsed_50, "./data/processed/shiny2.binomial.50.collapsed.variants.csv")
+write_csv(bin_notcollapsed_50, "./data/processed/shiny2.senslocal.binomial.50.notcollapsed.variants.csv")
+write_csv(bin_collapsed_50, "./data/processed/shiny2.senslocal.binomial.50.collapsed.variants.csv")
+
+variants_with_meta <- left_join(variants_verysens_binomial_50, sampleInfo, by = "Id")
+variants_with_meta <- mutate(variants_with_meta, group = paste0(inTNA, "_", InputLevel, "_", PercWT))
+variants_with_meta %>% group_by(group) %>% do(collapse_localcov(.)) -> variants_collapsed
+bin_notcollapsed_50 <- mutate(variants_with_meta, category = ifelse(mutation %in% expectedVariants$mutation, TRUE, FALSE))
+bin_collapsed_50 <- mutate(variants_collapsed, category = ifelse(mutation %in% expectedVariants$mutation, TRUE, FALSE))
+write_csv(bin_notcollapsed_50, "./data/processed/shiny2.verysens.binomial.50.notcollapsed.variants.csv")
+write_csv(bin_collapsed_50, "./data/processed/shiny2.verysens.binomial.50.collapsed.variants.csv")
 
 # 25%
-variants_with_meta <- left_join(variants_binomial_25, sampleInfo, by = "Id")
+variants_with_meta <- left_join(variants_senslocal_binomial_25, sampleInfo, by = "Id")
 variants_with_meta <- mutate(variants_with_meta, group = paste0(inTNA, "_", InputLevel, "_", PercWT))
 variants_with_meta %>% group_by(group) %>% do(collapse_localcov(.)) -> variants_collapsed
 bin_notcollapsed_25 <- mutate(variants_with_meta, category = ifelse(mutation %in% expectedVariants$mutation, TRUE, FALSE))
 bin_collapsed_25 <- mutate(variants_collapsed, category = ifelse(mutation %in% expectedVariants$mutation, TRUE, FALSE))
-write_csv(bin_notcollapsed_25, "./data/processed/shiny2.binomial.25.notcollapsed.variants.csv")
-write_csv(bin_collapsed_25, "./data/processed/shiny2.binomial.25.collapsed.variants.csv")
+write_csv(bin_notcollapsed_25, "./data/processed/shiny2.senslocal.binomial.25.notcollapsed.variants.csv")
+write_csv(bin_collapsed_25, "./data/processed/shiny2.senslocal.binomial.25.collapsed.variants.csv")
+
+variants_with_meta <- left_join(variants_verysens_binomial_25, sampleInfo, by = "Id")
+variants_with_meta <- mutate(variants_with_meta, group = paste0(inTNA, "_", InputLevel, "_", PercWT))
+variants_with_meta %>% group_by(group) %>% do(collapse_localcov(.)) -> variants_collapsed
+bin_notcollapsed_25 <- mutate(variants_with_meta, category = ifelse(mutation %in% expectedVariants$mutation, TRUE, FALSE))
+bin_collapsed_25 <- mutate(variants_collapsed, category = ifelse(mutation %in% expectedVariants$mutation, TRUE, FALSE))
+write_csv(bin_notcollapsed_25, "./data/processed/shiny2.verysens.binomial.25.notcollapsed.variants.csv")
+write_csv(bin_collapsed_25, "./data/processed/shiny2.verysens.binomial.25.collapsed.variants.csv")
 
 # 10%
-variants_with_meta <- left_join(variants_binomial_10, sampleInfo, by = "Id")
+variants_with_meta <- left_join(variants_senslocal_binomial_10, sampleInfo, by = "Id")
 variants_with_meta <- mutate(variants_with_meta, group = paste0(inTNA, "_", InputLevel, "_", PercWT))
 variants_with_meta %>% group_by(group) %>% do(collapse_localcov(.)) -> variants_collapsed
 bin_notcollapsed_10 <- mutate(variants_with_meta, category = ifelse(mutation %in% expectedVariants$mutation, TRUE, FALSE))
 bin_collapsed_10 <- mutate(variants_collapsed, category = ifelse(mutation %in% expectedVariants$mutation, TRUE, FALSE))
-write_csv(bin_notcollapsed_10, "./data/processed/shiny2.binomial.10.notcollapsed.variants.csv")
-write_csv(bin_collapsed_10, "./data/processed/shiny2.binomial.10.collapsed.variants.csv")
+write_csv(bin_notcollapsed_10, "./data/processed/shiny2.senslocal.binomial.10.notcollapsed.variants.csv")
+write_csv(bin_collapsed_10, "./data/processed/shiny2.senslocal.binomial.10.collapsed.variants.csv")
+
+variants_with_meta <- left_join(variants_verysens_binomial_10, sampleInfo, by = "Id")
+variants_with_meta <- mutate(variants_with_meta, group = paste0(inTNA, "_", InputLevel, "_", PercWT))
+variants_with_meta %>% group_by(group) %>% do(collapse_localcov(.)) -> variants_collapsed
+bin_notcollapsed_10 <- mutate(variants_with_meta, category = ifelse(mutation %in% expectedVariants$mutation, TRUE, FALSE))
+bin_collapsed_10 <- mutate(variants_collapsed, category = ifelse(mutation %in% expectedVariants$mutation, TRUE, FALSE))
+write_csv(bin_notcollapsed_10, "./data/processed/shiny2.verysens.binomial.10.notcollapsed.variants.csv")
+write_csv(bin_collapsed_10, "./data/processed/shiny2.verysens.binomial.10.collapsed.variants.csv")
 
 ### One-Sided Data
 
 # 100%
-variants_with_meta <- left_join(variants_onesided_100, sampleInfo, by = "Id")
+variants_with_meta <- left_join(variants_senslocal_onesided_100, sampleInfo, by = "Id")
 variants_with_meta <- mutate(variants_with_meta, group = paste0(inTNA, "_", InputLevel, "_", PercWT))
 variants_with_meta %>% group_by(group) %>% do(collapse_localcov(.)) -> variants_collapsed
 one_notcollapsed_100 <- mutate(variants_with_meta, category = ifelse(mutation %in% expectedVariants$mutation, TRUE, FALSE))
 one_collapsed_100 <- mutate(variants_collapsed, category = ifelse(mutation %in% expectedVariants$mutation, TRUE, FALSE))
-write_csv(one_notcollapsed_100, "./data/processed/shiny2.onesided.100.notcollapsed.variants.csv")
-write_csv(one_collapsed_100, "./data/processed/shiny2.onesided.100.collapsed.variants.csv")
+write_csv(one_notcollapsed_100, "./data/processed/shiny2.senslocal.onesided.100.notcollapsed.variants.csv")
+write_csv(one_collapsed_100, "./data/processed/shiny2.senslocal.onesided.100.collapsed.variants.csv")
+
+variants_with_meta <- left_join(variants_verysens_onesided_100, sampleInfo, by = "Id")
+variants_with_meta <- mutate(variants_with_meta, group = paste0(inTNA, "_", InputLevel, "_", PercWT))
+variants_with_meta %>% group_by(group) %>% do(collapse_localcov(.)) -> variants_collapsed
+one_notcollapsed_100 <- mutate(variants_with_meta, category = ifelse(mutation %in% expectedVariants$mutation, TRUE, FALSE))
+one_collapsed_100 <- mutate(variants_collapsed, category = ifelse(mutation %in% expectedVariants$mutation, TRUE, FALSE))
+write_csv(one_notcollapsed_100, "./data/processed/shiny2.verysens.onesided.100.notcollapsed.variants.csv")
+write_csv(one_collapsed_100, "./data/processed/shiny2.verysens.onesided.100.collapsed.variants.csv")
 
 # 50%
-variants_with_meta <- left_join(variants_onesided_50, sampleInfo, by = "Id")
+variants_with_meta <- left_join(variants_senslocal_onesided_50, sampleInfo, by = "Id")
 variants_with_meta <- mutate(variants_with_meta, group = paste0(inTNA, "_", InputLevel, "_", PercWT))
 variants_with_meta %>% group_by(group) %>% do(collapse_localcov(.)) -> variants_collapsed
 one_notcollapsed_50 <- mutate(variants_with_meta, category = ifelse(mutation %in% expectedVariants$mutation, TRUE, FALSE))
 one_collapsed_50 <- mutate(variants_collapsed, category = ifelse(mutation %in% expectedVariants$mutation, TRUE, FALSE))
-write_csv(one_notcollapsed_50, "./data/processed/shiny2.onesided.50.notcollapsed.variants.csv")
-write_csv(one_collapsed_50, "./data/processed/shiny2.onesided.50.collapsed.variants.csv")
+write_csv(one_notcollapsed_50, "./data/processed/shiny2.senslocal.onesided.50.notcollapsed.variants.csv")
+write_csv(one_collapsed_50, "./data/processed/shiny2.senslocal.onesided.50.collapsed.variants.csv")
+
+variants_with_meta <- left_join(variants_verysens_onesided_50, sampleInfo, by = "Id")
+variants_with_meta <- mutate(variants_with_meta, group = paste0(inTNA, "_", InputLevel, "_", PercWT))
+variants_with_meta %>% group_by(group) %>% do(collapse_localcov(.)) -> variants_collapsed
+one_notcollapsed_50 <- mutate(variants_with_meta, category = ifelse(mutation %in% expectedVariants$mutation, TRUE, FALSE))
+one_collapsed_50 <- mutate(variants_collapsed, category = ifelse(mutation %in% expectedVariants$mutation, TRUE, FALSE))
+write_csv(one_notcollapsed_50, "./data/processed/shiny2.verysens.onesided.50.notcollapsed.variants.csv")
+write_csv(one_collapsed_50, "./data/processed/shiny2.verysens.onesided.50.collapsed.variants.csv")
 
 # 25%
-variants_with_meta <- left_join(variants_onesided_25, sampleInfo, by = "Id")
+variants_with_meta <- left_join(variants_senslocal_onesided_25, sampleInfo, by = "Id")
 variants_with_meta <- mutate(variants_with_meta, group = paste0(inTNA, "_", InputLevel, "_", PercWT))
 variants_with_meta %>% group_by(group) %>% do(collapse_localcov(.)) -> variants_collapsed
 one_notcollapsed_25 <- mutate(variants_with_meta, category = ifelse(mutation %in% expectedVariants$mutation, TRUE, FALSE))
 one_collapsed_25 <- mutate(variants_collapsed, category = ifelse(mutation %in% expectedVariants$mutation, TRUE, FALSE))
-write_csv(one_notcollapsed_25, "./data/processed/shiny2.onesided.25.notcollapsed.variants.csv")
-write_csv(one_collapsed_25, "./data/processed/shiny2.onesided.25.collapsed.variants.csv")
+write_csv(one_notcollapsed_25, "./data/processed/shiny2.senslocal.onesided.25.notcollapsed.variants.csv")
+write_csv(one_collapsed_25, "./data/processed/shiny2.senslocal.onesided.25.collapsed.variants.csv")
+
+variants_with_meta <- left_join(variants_verysens_onesided_25, sampleInfo, by = "Id")
+variants_with_meta <- mutate(variants_with_meta, group = paste0(inTNA, "_", InputLevel, "_", PercWT))
+variants_with_meta %>% group_by(group) %>% do(collapse_localcov(.)) -> variants_collapsed
+one_notcollapsed_25 <- mutate(variants_with_meta, category = ifelse(mutation %in% expectedVariants$mutation, TRUE, FALSE))
+one_collapsed_25 <- mutate(variants_collapsed, category = ifelse(mutation %in% expectedVariants$mutation, TRUE, FALSE))
+write_csv(one_notcollapsed_25, "./data/processed/shiny2.verysens.onesided.25.notcollapsed.variants.csv")
+write_csv(one_collapsed_25, "./data/processed/shiny2.verysens.onesided.25.collapsed.variants.csv")
 
 # 10%
-variants_with_meta <- left_join(variants_onesided_10, sampleInfo, by = "Id")
+variants_with_meta <- left_join(variants_senslocal_onesided_10, sampleInfo, by = "Id")
 variants_with_meta <- mutate(variants_with_meta, group = paste0(inTNA, "_", InputLevel, "_", PercWT))
 variants_with_meta %>% group_by(group) %>% do(collapse_localcov(.)) -> variants_collapsed
 one_notcollapsed_10 <- mutate(variants_with_meta, category = ifelse(mutation %in% expectedVariants$mutation, TRUE, FALSE))
 one_collapsed_10 <- mutate(variants_collapsed, category = ifelse(mutation %in% expectedVariants$mutation, TRUE, FALSE))
-write_csv(one_notcollapsed_10, "./data/processed/shiny2.onesided.10.notcollapsed.variants.csv")
-write_csv(one_collapsed_10, "./data/processed/shiny2.onesided.10.collapsed.variants.csv")
+write_csv(one_notcollapsed_10, "./data/processed/shiny2.senslocal.onesided.10.notcollapsed.variants.csv")
+write_csv(one_collapsed_10, "./data/processed/shiny2.senslocal.onesided.10.collapsed.variants.csv")
 
-### Two-Sided Data
-variants_with_meta <- left_join(variants_twosided, sampleInfo, by = "Id")
+variants_with_meta <- left_join(variants_verysens_onesided_10, sampleInfo, by = "Id")
 variants_with_meta <- mutate(variants_with_meta, group = paste0(inTNA, "_", InputLevel, "_", PercWT))
 variants_with_meta %>% group_by(group) %>% do(collapse_localcov(.)) -> variants_collapsed
-
-two_notcollapsed <- mutate(variants_with_meta, category = ifelse(mutation %in% expectedVariants$mutation, TRUE, FALSE))
-two_collapsed <- mutate(variants_collapsed, category = ifelse(mutation %in% expectedVariants$mutation, TRUE, FALSE))
-
-# These don't have MapQ, Phred, Read_pos, or p.val. enter here just to see data. Why is the two-sided run so terrible for the benchmarking data?!
-two_notcollapsed <- mutate(two_notcollapsed, MapQ = 44, Phred = 39, p.val = 0, Read_pos = 100)
-two_collapsed <- mutate(two_collapsed, MapQ = 44, Phred = 39, p.val = 0, Read_pos = 100)
-
-write_csv(two_notcollapsed, "./data/processed/shiny2.twosided.notcollapsed.variants.csv")
-write_csv(two_collapsed, "./data/processed/shiny2.twosided.collapsed.variants.csv")
+one_notcollapsed_10 <- mutate(variants_with_meta, category = ifelse(mutation %in% expectedVariants$mutation, TRUE, FALSE))
+one_collapsed_10 <- mutate(variants_collapsed, category = ifelse(mutation %in% expectedVariants$mutation, TRUE, FALSE))
+write_csv(one_notcollapsed_10, "./data/processed/shiny2.verysens.onesided.10.notcollapsed.variants.csv")
+write_csv(one_collapsed_10, "./data/processed/shiny2.verysens.onesided.10.collapsed.variants.csv")
 
 ### Prepare coverage data ###
 
-coverage_binomial_100 <- read.csv("./data/raw/shiny2.binomial.100.coverage.csv", colClasses = c("character", "integer", "integer", "integer", "character"))
-coverage_onesided_100 <- read.csv("./data/raw/shiny2.onesided.100.coverage.csv", colClasses = c("character", "integer", "integer", "integer", "character"))
+# sens local
+coverage_sl_binomial_100 <- read.csv("./data/raw/shiny2.senslocal.binomial.100.coverage.csv", colClasses = c("character", "integer", "integer", "integer", "character"))
+coverage_sl_onesided_100 <- read.csv("./data/raw/shiny2.senslocal.onesided.100.coverage.csv", colClasses = c("character", "integer", "integer", "integer", "character"))
 
-coverage_binomial_50 <- read.csv("./data/raw/shiny2.binomial.50.coverage.csv", colClasses = c("character", "integer", "integer", "integer", "character"))
-coverage_onesided_50 <- read.csv("./data/raw/shiny2.onesided.50.coverage.csv", colClasses = c("character", "integer", "integer", "integer", "character"))
+coverage_sl_binomial_50 <- read.csv("./data/raw/shiny2.senslocal.binomial.50.coverage.csv", colClasses = c("character", "integer", "integer", "integer", "character"))
+coverage_sl_onesided_50 <- read.csv("./data/raw/shiny2.senslocal.onesided.50.coverage.csv", colClasses = c("character", "integer", "integer", "integer", "character"))
 
-coverage_binomial_25 <- read.csv("./data/raw/shiny2.binomial.25.coverage.csv", colClasses = c("character", "integer", "integer", "integer", "character"))
-coverage_onesided_25 <- read.csv("./data/raw/shiny2.onesided.25.coverage.csv", colClasses = c("character", "integer", "integer", "integer", "character"))
+coverage_sl_binomial_25 <- read.csv("./data/raw/shiny2.senslocal.binomial.25.coverage.csv", colClasses = c("character", "integer", "integer", "integer", "character"))
+coverage_sl_onesided_25 <- read.csv("./data/raw/shiny2.senslocal.onesided.25.coverage.csv", colClasses = c("character", "integer", "integer", "integer", "character"))
 
-coverage_binomial_10 <- read.csv("./data/raw/shiny2.binomial.10.coverage.csv", colClasses = c("character", "integer", "integer", "integer", "character"))
-coverage_onesided_10 <- read.csv("./data/raw/shiny2.onesided.10.coverage.csv", colClasses = c("character", "integer", "integer", "integer", "character"))
-
-#coverage_twosided <- read.csv("./data/raw/shiny2.twosided.coverage.csv", colClasses = c("character", "integer", "integer", "integer", "character"))
+coverage_sl_binomial_10 <- read.csv("./data/raw/shiny2.senslocal.binomial.10.coverage.csv", colClasses = c("character", "integer", "integer", "integer", "character"))
+coverage_sl_onesided_10 <- read.csv("./data/raw/shiny2.senslocal.onesided.10.coverage.csv", colClasses = c("character", "integer", "integer", "integer", "character"))
 
 sampleInfo <- mutate(sampleInfo, Id = as.character(Id))
-coverage_binomial_100_wmeta <- left_join(coverage_binomial_100, sampleInfo, by = "Id")
-coverage_onesided_100_wmeta <- left_join(coverage_onesided_100, sampleInfo, by = "Id")
-coverage_binomial_50_wmeta <- left_join(coverage_binomial_50, sampleInfo, by = "Id")
-coverage_onesided_50_wmeta <- left_join(coverage_onesided_50, sampleInfo, by = "Id")
-coverage_binomial_25_wmeta <- left_join(coverage_binomial_25, sampleInfo, by = "Id")
-coverage_onesided_25_wmeta <- left_join(coverage_onesided_25, sampleInfo, by = "Id")
-coverage_binomial_10_wmeta <- left_join(coverage_binomial_10, sampleInfo, by = "Id")
-coverage_onesided_10_wmeta <- left_join(coverage_onesided_10, sampleInfo, by = "Id")
-#coverage_twosided_wmeta <- left_join(coverage_twosided, sampleInfo, by = "Id")
+coverage_sl_binomial_100_wmeta <- left_join(coverage_sl_binomial_100, sampleInfo, by = "Id")
+coverage_sl_onesided_100_wmeta <- left_join(coverage_sl_onesided_100, sampleInfo, by = "Id")
+coverage_sl_binomial_50_wmeta <- left_join(coverage_sl_binomial_50, sampleInfo, by = "Id")
+coverage_sl_onesided_50_wmeta <- left_join(coverage_sl_onesided_50, sampleInfo, by = "Id")
+coverage_sl_binomial_25_wmeta <- left_join(coverage_sl_binomial_25, sampleInfo, by = "Id")
+coverage_sl_onesided_25_wmeta <- left_join(coverage_sl_onesided_25, sampleInfo, by = "Id")
+coverage_sl_binomial_10_wmeta <- left_join(coverage_sl_binomial_10, sampleInfo, by = "Id")
+coverage_sl_onesided_10_wmeta <- left_join(coverage_sl_onesided_10, sampleInfo, by = "Id")
 
-write_csv(coverage_binomial_100_wmeta, "./data/processed/shiny2.binomial.100.coverage.csv")
-write_csv(coverage_onesided_100_wmeta, "./data/processed/shiny2.onesided.100.coverage.csv")
-write_csv(coverage_binomial_50_wmeta, "./data/processed/shiny2.binomial.50.coverage.csv")
-write_csv(coverage_onesided_50_wmeta, "./data/processed/shiny2.onesided.50.coverage.csv")
-write_csv(coverage_binomial_25_wmeta, "./data/processed/shiny2.binomial.25.coverage.csv")
-write_csv(coverage_onesided_25_wmeta, "./data/processed/shiny2.onesided.25.coverage.csv")
-write_csv(coverage_binomial_10_wmeta, "./data/processed/shiny2.binomial.10.coverage.csv")
-write_csv(coverage_onesided_10_wmeta, "./data/processed/shiny2.onesided.10.coverage.csv")
-#write_csv(coverage_twosided_wmeta, "./data/processed/shiny2.twosided.coverage.csv")
+write_csv(coverage_sl_binomial_100_wmeta, "./data/processed/shiny2.senslocal.binomial.100.coverage.csv")
+write_csv(coverage_sl_onesided_100_wmeta, "./data/processed/shiny2.senslocal.onesided.100.coverage.csv")
+write_csv(coverage_sl_binomial_50_wmeta, "./data/processed/shiny2.senslocal.binomial.50.coverage.csv")
+write_csv(coverage_sl_onesided_50_wmeta, "./data/processed/shiny2.senslocal.onesided.50.coverage.csv")
+write_csv(coverage_sl_binomial_25_wmeta, "./data/processed/shiny2.senslocal.binomial.25.coverage.csv")
+write_csv(coverage_sl_onesided_25_wmeta, "./data/processed/shiny2.senslocal.onesided.25.coverage.csv")
+write_csv(coverage_sl_binomial_10_wmeta, "./data/processed/shiny2.senslocal.binomial.10.coverage.csv")
+write_csv(coverage_sl_onesided_10_wmeta, "./data/processed/shiny2.senslocal.onesided.10.coverage.csv")
 
+# very sens
+coverage_vs_binomial_100 <- read.csv("./data/raw/shiny2.verysens.binomial.100.coverage.csv", colClasses = c("character", "integer", "integer", "integer", "character"))
+coverage_vs_onesided_100 <- read.csv("./data/raw/shiny2.verysens.onesided.100.coverage.csv", colClasses = c("character", "integer", "integer", "integer", "character"))
+
+coverage_vs_binomial_50 <- read.csv("./data/raw/shiny2.verysens.binomial.50.coverage.csv", colClasses = c("character", "integer", "integer", "integer", "character"))
+coverage_vs_onesided_50 <- read.csv("./data/raw/shiny2.verysens.onesided.50.coverage.csv", colClasses = c("character", "integer", "integer", "integer", "character"))
+
+coverage_vs_binomial_25 <- read.csv("./data/raw/shiny2.verysens.binomial.25.coverage.csv", colClasses = c("character", "integer", "integer", "integer", "character"))
+coverage_vs_onesided_25 <- read.csv("./data/raw/shiny2.verysens.onesided.25.coverage.csv", colClasses = c("character", "integer", "integer", "integer", "character"))
+
+coverage_vs_binomial_10 <- read.csv("./data/raw/shiny2.verysens.binomial.10.coverage.csv", colClasses = c("character", "integer", "integer", "integer", "character"))
+coverage_vs_onesided_10 <- read.csv("./data/raw/shiny2.verysens.onesided.10.coverage.csv", colClasses = c("character", "integer", "integer", "integer", "character"))
+
+coverage_vs_binomial_100_wmeta <- left_join(coverage_vs_binomial_100, sampleInfo, by = "Id")
+coverage_vs_onesided_100_wmeta <- left_join(coverage_vs_onesided_100, sampleInfo, by = "Id")
+coverage_vs_binomial_50_wmeta <- left_join(coverage_vs_binomial_50, sampleInfo, by = "Id")
+coverage_vs_onesided_50_wmeta <- left_join(coverage_vs_onesided_50, sampleInfo, by = "Id")
+coverage_vs_binomial_25_wmeta <- left_join(coverage_vs_binomial_25, sampleInfo, by = "Id")
+coverage_vs_onesided_25_wmeta <- left_join(coverage_vs_onesided_25, sampleInfo, by = "Id")
+coverage_vs_binomial_10_wmeta <- left_join(coverage_vs_binomial_10, sampleInfo, by = "Id")
+coverage_vs_onesided_10_wmeta <- left_join(coverage_vs_onesided_10, sampleInfo, by = "Id")
+
+write_csv(coverage_vs_binomial_100_wmeta, "./data/processed/shiny2.verysens.binomial.100.coverage.csv")
+write_csv(coverage_vs_onesided_100_wmeta, "./data/processed/shiny2.verysens.onesided.100.coverage.csv")
+write_csv(coverage_vs_binomial_50_wmeta, "./data/processed/shiny2.verysens.binomial.50.coverage.csv")
+write_csv(coverage_vs_onesided_50_wmeta, "./data/processed/shiny2.verysens.onesided.50.coverage.csv")
+write_csv(coverage_vs_binomial_25_wmeta, "./data/processed/shiny2.verysens.binomial.25.coverage.csv")
+write_csv(coverage_vs_onesided_25_wmeta, "./data/processed/shiny2.verysens.onesided.25.coverage.csv")
+write_csv(coverage_vs_binomial_10_wmeta, "./data/processed/shiny2.verysens.binomial.10.coverage.csv")
+write_csv(coverage_vs_onesided_10_wmeta, "./data/processed/shiny2.verysens.onesided.10.coverage.csv")

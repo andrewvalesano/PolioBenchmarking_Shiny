@@ -18,15 +18,15 @@ possible_vars <- (primer_rev_outer - primer_fwd_outer - 1)*3 # Positions in prim
 
 # ======================= Options for reading in variant data ====================
 
-dups <- "first" # options: both, first, second
-subset <- "10" # options: 100, 50, 25, 10
+dups <- "both" # options: both, first, second
+subset <- "100" # options: 100, 50, 25, 10
 disp <- "onesided" # options: onesided or binomial
-inputLevel <- "4_E4" # options: 4_E4, 9_E3, 9_E2, 9_E1
+inputLevel <- "9_E3" # options: 4_E4, 9_E3, 9_E2, 9_E1
 tna <- "yes" # options: yes, no
 
-p.val.cutoff <- 0.1
-MapQ.cutoff <- 30
-Phred.cutoff <- 35
+p.val.cutoff <- 0.9
+MapQ.cutoff <- 0
+Phred.cutoff <- 0
 freq.var.cutoff <- 0
 Read_pos_cutoff_1 <- 0
 Read_pos_cutoff_2 <- 250
@@ -50,10 +50,10 @@ data <- mutate(data, SampleNumber = Id)
 data <- mutate(data, exp.freq = PercWT/100)
 data <- mutate(data, Id = as.factor(as.character(PercWT)))
 data <- filter(data, pos > primer_fwd_outer & pos < primer_rev_outer)
-variant_data <- filter(data, p.val < p.val.cutoff & 
-                              MapQ > MapQ.cutoff & 
-                              Phred > Phred.cutoff & 
-                              freq.var > freq.var.cutoff & 
+variant_data <- filter(data, p.val <= p.val.cutoff & 
+                              MapQ >= MapQ.cutoff & 
+                              Phred >= Phred.cutoff & 
+                              freq.var >= freq.var.cutoff & 
                               Read_pos <= Read_pos_cutoff_2 & 
                               Read_pos >= Read_pos_cutoff_1)
 variant_data <- mutate(variant_data, level = ifelse(PercWT == 1, "1_percent", 
@@ -62,6 +62,66 @@ variant_data <- mutate(variant_data, level = ifelse(PercWT == 1, "1_percent",
                                                                   ifelse(PercWT == 10, "10_percent", 
                                                                          ifelse(PercWT == 100, "100_percent", NA))))))
 variant_data <- mutate(variant_data, mutation_level = paste0(mutation, "_", level))
+
+# ============== Read in test single data ============
+# Does running the pipeline with different parameters make a difference? More false positives to weed out?
+
+sift_dups <- function(df)
+{
+  if(nrow(df) > 2) stop("Too many mutations here")
+  
+  df <- dplyr::mutate(df, coverage = cov.tst.bw + cov.tst.fw)
+  higher_qual <- subset(df, coverage == max(df$coverage))
+  if(nrow(higher_qual) > 1)
+  { 
+    higher_qual <- higher_qual[1,]
+  }
+  return(higher_qual)
+}
+
+# Adapted for polio data.
+collapse_localcov <- function(df)
+{
+  stopifnot(length(unique(df$group)) == 1)
+  
+  df %>% dplyr::group_by(mutation) %>% dplyr::summarize(found = length(mutation)) -> count_mutations
+  
+  stopifnot(max(count_mutations$found) < 3)
+  
+  count_mutations %>% dplyr::filter(found == 2) -> good_mut
+  
+  df %>% dplyr::filter(mutation %in% good_mut$mutation) -> good_var
+  
+  good_var %>% dplyr::group_by(mutation) %>% dplyr::do(sift_dups(.)) -> dups_good
+  
+  return(dplyr::ungroup(dups_good))
+}
+
+
+variants_single <- read.csv("data/raw/test.verysens.onesided.100.variants.csv")
+
+expectedVariants <- read.csv("./data/reference/MixingStudyExpectedVariants.csv")
+sampleInfo <- mutate(sampleInfo, Id = SampleNumber)
+variants_with_meta <- left_join(variants_single, sampleInfo, by = "Id")
+variants_with_meta <- mutate(variants_with_meta, group = paste0(inTNA, "_", InputLevel, "_", PercWT))
+variants_with_meta %>% group_by(group) %>% do(collapse_localcov(.)) -> variants_collapsed
+notcollapsed <- mutate(variants_with_meta, category = ifelse(mutation %in% expectedVariants$mutation, TRUE, FALSE))
+collapsed <- mutate(variants_collapsed, category = ifelse(mutation %in% expectedVariants$mutation, TRUE, FALSE))
+
+variant_data <- notcollapsed # data to use below
+
+variant_data <- mutate(variant_data, SampleNumber = Id)
+variant_data <- mutate(variant_data, exp.freq = PercWT/100)
+variant_data <- mutate(variant_data, Id = as.factor(as.character(PercWT)))
+variant_data <- filter(variant_data, pos > primer_fwd_outer & pos < primer_rev_outer)
+variant_data <- mutate(variant_data, level = ifelse(PercWT == 1, "1_percent", 
+                                                    ifelse(PercWT == 2, "2_percent", 
+                                                           ifelse(PercWT == 5, "5_percent", 
+                                                                  ifelse(PercWT == 10, "10_percent", 
+                                                                         ifelse(PercWT == 100, "100_percent", NA))))))
+variant_data <- mutate(variant_data, mutation_level = paste0(mutation, "_", level))
+
+variant_data <- filter(variant_data, freq.var > 0.5 & inTNA == "yes", InputLevel == "9_E2" & !(ref == var) & PercWT != 100 & category == FALSE)
 
 # ===================================== Read in coverage data ================================
 

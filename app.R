@@ -36,10 +36,10 @@ ui <- fluidPage(
     column(3,
            sliderInput(inputId = "MapQ",
                        label = "Mean MapQ Cutoff",
-                       min = 30, max = 44, value = 30),
+                       min = 20, max = 44, value = 30),
            sliderInput(inputId = "Phred",
                        label = "Mean Phred Cutoff",
-                       min = 35, max = 39, value = 30),
+                       min = 20, max = 39, value = 35),
            
            sliderInput(inputId = "freq.var",
                         label = "Frequency Cutoff",
@@ -51,7 +51,7 @@ ui <- fluidPage(
                        min = 0, max = 250, value = c(0, 250)),
            sliderInput(inputId = "p.val",
                        label = "p-value Cutoff",
-                       min = 0, max = 0.9, value = 0.1)
+                       min = 0, max = 0.9, value = 0.9)
     ),
     column(3,
            radioButtons("dups",
@@ -70,7 +70,12 @@ ui <- fluidPage(
                         label = "Spiked into stool total nucleic acid",
                         choices = list("Spike-in" = "yes", 
                                        "No spike-in" = "no"),
-                        selected = "yes")
+                        selected = "yes"),
+           radioButtons("bowtie",
+                        label = "Bowtie2 Alignment Option",
+                        choices = list("--sensitive-local" = "senslocal", 
+                                       "--very-sensitive" = "verysens"),
+                        selected = "senslocal")
     ),
     
     column(3,
@@ -84,7 +89,12 @@ ui <- fluidPage(
                                        "50%" = "50",
                                        "25%" = "25",
                                        "10%" = "10"),
-                        selected = "100")
+                        selected = "100"),
+           radioButtons("exSeg2",
+                        label = "Exclude Segment 2?",
+                        choices = list("Yes" = "yes", 
+                                       "No" = "no"),
+                        selected = "no")
     )
   )           
 )
@@ -94,7 +104,7 @@ server <- function(input, output)
   dataInput <- reactive({
     
     replicate = ifelse(input$dups == "first" | input$dups == "second", "notcollapsed", "collapsed")
-    file <- paste0("./data/processed/shiny2.", input$disp, ".", input$subset, ".", replicate, ".variants.csv")
+    file <- paste0("./data/processed/shiny2.", input$bowtie, ".", input$disp, ".", input$subset, ".", replicate, ".variants.csv")
     variants_raw <- read_csv(file)
     
     if(input$dups == "first") {
@@ -115,6 +125,11 @@ server <- function(input, output)
     data <- mutate(data, Id = as.factor(as.character(PercWT)))
     data <- filter(data, pos > primer_fwd_outer & pos < primer_rev_outer)
     
+    if(input$exSeg2 == "yes")
+    {
+      data <- filter(data, pos < 1500 | pos > 4100)
+    } else {}
+    
     range_factor <- 5 # this filter prevents there from being observed true positives that are due to lack of Sabin1 amplification in low copy number samples
     #data <- mutate(data, category = ifelse(freq.var > exp.freq*range_factor | freq.var < exp.freq*(1/range_factor), FALSE, category))
     
@@ -123,7 +138,7 @@ server <- function(input, output)
   
   covInput <- reactive({
     
-    file <- paste0("./data/processed/shiny2.", input$disp, ".", input$subset, ".coverage.csv")
+    file <- paste0("./data/processed/shiny2.", input$bowtie, ".", input$disp, ".", input$subset, ".coverage.csv")
     coverage_raw <- read.csv(file)
     
     return(coverage_raw)
@@ -137,9 +152,17 @@ server <- function(input, output)
     primer_fwd_outer <- 95 # 95 to 115
     primer_rev_outer <- 7440 # 7415 to 7440
     expectedVariants <- read_csv("./data/reference/MixingStudyExpectedVariants.csv")
-    expectedTruePos <- nrow(expectedVariants) # Expect to see 66 variants.
-    possible_vars <- (primer_rev_outer - primer_fwd_outer - 1)*3 # Positions in primer range, times 3.
-
+    
+    if(input$exSeg2 == "yes")
+    {
+      expectedVariants <- filter(expectedVariants, Position < 1500 | Position > 4100)
+      expectedTruePos <- nrow(expectedVariants) # Expect to see 66 variants.
+      possible_vars <- (primer_rev_outer - primer_fwd_outer - 1 - (4100-1500))*3 # Positions in primer range, times 3.
+    } else {
+      expectedTruePos <- nrow(expectedVariants) # Expect to see 66 variants.
+      possible_vars <- (primer_rev_outer - primer_fwd_outer - 1)*3 # Positions in primer range, times 3.
+    }
+    
     filtered_data <- filter(data, p.val < input$p.val, MapQ > input$MapQ & Phred > input$Phred & freq.var > input$freq.var & Read_pos <= input$pos[2] & Read_pos >= input$pos[1])
 
     palette <- wes_palette("Darjeeling1")
@@ -195,7 +218,6 @@ server <- function(input, output)
   })
   
   # Plot coverage for the given samples
-  # ALV: add lines for various coverage levels for comparison with low-coverage areas
   output$Coverage <- renderPlot({
     data <- dataInput()
     coverage_raw <- covInput()
@@ -232,6 +254,11 @@ server <- function(input, output)
     expectedVariants <- read_csv("./data/reference/MixingStudyExpectedVariants_ByLevel.csv")
     expectedVariants <- mutate(expectedVariants, mutation_level = paste0(mutation, "_", level))
     expectedVariants <- mutate(expectedVariants, found = ifelse(mutation_level %in% data$mutation_level, "True Positive", "False Negative"))
+    
+    if(input$exSeg2 == "yes")
+    {
+      expectedVariants <- filter(expectedVariants, Position < 1500 | Position > 4100)
+    } else {}
     
     levels <- c("100_percent", "10_percent", "5_percent", "2_percent", "1_percent")
     chrs <- data.frame("level" = levels)
@@ -287,7 +314,6 @@ server <- function(input, output)
   })
   
   # Plot frequency of true positive variants against position, color by expected frequency
-  # ALV: finish this one
   output$FreqByPosition <- renderPlot({
     
     data <- dataInput()
@@ -339,8 +365,18 @@ server <- function(input, output)
     primer_fwd_outer <- 95 # 95 to 115
     primer_rev_outer <- 7440 # 7415 to 7440
     expectedVariants <- read_csv("./data/reference/MixingStudyExpectedVariants.csv")
-    expectedTruePos <- nrow(expectedVariants) # Expect to see 66 variants.
-    possible_vars <- (primer_rev_outer - primer_fwd_outer - 1)*3 # Positions in primer range, times 3.
+    #expectedTruePos <- nrow(expectedVariants) # Expect to see 66 variants.
+    #possible_vars <- (primer_rev_outer - primer_fwd_outer - 1)*3 # Positions in primer range, times 3.
+    
+    if(input$exSeg2 == "yes")
+    {
+      expectedVariants <- filter(expectedVariants, Position < 1500 | Position > 4100)
+      expectedTruePos <- nrow(expectedVariants) # Expect to see 66 variants.
+      possible_vars <- (primer_rev_outer - primer_fwd_outer - 1 - (4100-1500))*3 # Positions in primer range, times 3.
+    } else {
+      expectedTruePos <- nrow(expectedVariants) # Expect to see 66 variants.
+      possible_vars <- (primer_rev_outer - primer_fwd_outer - 1)*3 # Positions in primer range, times 3.
+    }
     
     filtered_data <- filter(data, p.val < input$p.val, MapQ > input$MapQ & Phred > input$Phred & freq.var > input$freq.var & Read_pos <= input$pos[2] & Read_pos >= input$pos[1])
     
